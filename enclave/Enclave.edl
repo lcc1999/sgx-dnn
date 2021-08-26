@@ -1,0 +1,26 @@
+enclave {
+
+    trusted {
+        public void ecall_dense([user_check] float* input, [user_check] float* output, [user_check] float* weights,
+            [user_check] float* bias, [user_check] long int dim_in[2], [user_check] long int dim_w[2]);
+        public void ecall_dense_backward([user_check] float* input, [user_check] float* weights, [user_check] float* grad, 
+            [user_check] float* grad_input, [user_check] float* grad_weights, [user_check] float* grad_bias, 
+            [user_check] long int dim_in[2], [user_check] long int dim_w[2]);
+        public void ecall_relu([user_check] float* input, [user_check] float* output, long int dim);
+        public void ecall_relu_backward([user_check] float* input, [user_check] float* grad, 
+            [user_check] float* grad_input, long int dim);
+        public void ecall_softmax([user_check] float* input, [user_check] float* output, [user_check] long int dim[2]);
+        public void ecall_softmax_backward([user_check] float* softmax, [user_check] float* grad, 
+            [user_check] float* grad_input, [user_check] long int dim[2]);
+        public void ecall_dropout([in, size=dim] float* input, [in, size=dim] float* random, 
+            [out, size=dim] float* output, long int dim, float rate);
+        public void ecall_dropout_backward([in, size=dim] float* random, [in, size=dim] float* grad, 
+            [out, size=dim] float* grad_input, long int dim, float rate);
+
+    };
+
+    untrusted {
+        /* define OCALLs here. */
+        void ocall_print_string([in, string] const char *str);
+    };
+};
