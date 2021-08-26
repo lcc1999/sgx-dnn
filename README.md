@@ -5,3 +5,4 @@ The Eigen library are required and this project refers to slalom.
 ## Acknowledgements
 * [Tensorflow](https://github.com/tensorflow/tensorflow)
 * [Slalom](https://github.com/ftramer/slalom)
+* [SGX](https://github.com/intel/linux-sgx)
