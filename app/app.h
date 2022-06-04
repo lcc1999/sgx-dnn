@@ -13,4 +13,6 @@ extern "C"{
     void softmax_backward(unsigned long int eid, float* softmax, float* grad, float* grad_input, long int dim[2]);
     void dropout(unsigned long int eid, float* input, float* random, float* output, long int dim, float rate);
     void dropout_backward(unsigned long int eid, float* random, float* grad, float* grad_input, long int dim, float rate);
+    void add(unsigned long int eid, float* first, float* second, float* result, long int dim);
+    void sub(unsigned long int eid, float* first, float* second, float* result, long int dim);
 }

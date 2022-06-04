@@ -16,7 +16,10 @@ enclave {
             [out, size=dim] float* output, long int dim, float rate);
         public void ecall_dropout_backward([in, size=dim] float* random, [in, size=dim] float* grad, 
             [out, size=dim] float* grad_input, long int dim, float rate);
-
+        public void ecall_add([in, size=dim] float* first, [in, size=dim] float* second, 
+            [out, size=dim] float* result, size_t dim);
+        public void ecall_sub([in, size=dim] float* first, [in, size=dim] float* second, 
+            [out, size=dim] float* result, size_t dim);
     };
 
     untrusted {

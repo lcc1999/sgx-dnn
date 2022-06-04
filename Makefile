@@ -211,7 +211,7 @@ $(Gen_Trusted_Object_Seal): $(Gen_Trusted_Source_Seal)
 	@echo "CC   <=  $<"
 
 enclave/%.o: enclave/%.cpp
-	@$(CXX) $(SGX_COMMON_CXXFLAGS) $(Enclave_Compile_CXXFlags) -c $< -o $@
+	@$(CXX) $(SGX_COMMON_CXXFLAGS) $(Enclave_Compile_CXXFlags) -c $< -o $@ -march=native
 	@echo "CXX  <=  $<"
 
 $(Enclave_Objects): $(Gen_Trusted_Source_Seal) 

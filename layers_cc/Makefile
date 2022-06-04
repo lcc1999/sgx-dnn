@@ -8,7 +8,7 @@ dropout_kernel.cc dropout_kernel_grad.cc\
 rand.cc
 
 layers.so: $(objects)
-	g++ -std=c++11 -shared $(objects) -o layers.so -fPIC $(TF_CFLAGS) $(TF_LFLAGS) -DUSE_SGX -D_GLIBCXX_USE_CXX11_ABI=0 -O2
+	g++ -std=c++11 -shared $(objects) -o layers.so -fPIC $(TF_CFLAGS) $(TF_LFLAGS) -DUSE_SGX 
 
 clean:
 	rm -rf layers.so

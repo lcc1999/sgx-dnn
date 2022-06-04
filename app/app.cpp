@@ -39,6 +39,22 @@ void destroy_enclave(unsigned long int eid)
     printf("destroy %lu finish.\n",eid);
 }
 
+void add(unsigned long int eid, float* first, float* second, float* result, long int dim){
+    sgx_status_t ret = ecall_add(eid, first, second, result, dim);
+	if (ret != SGX_SUCCESS) {
+		ret_error_support(ret);
+		throw ret;
+	}
+}
+
+void sub(unsigned long int eid, float* first, float* second, float* result, long int dim){
+    sgx_status_t ret = ecall_sub(eid, first, second, result, dim);
+	if (ret != SGX_SUCCESS) {
+		ret_error_support(ret);
+		throw ret;
+	}
+}
+
 void dense(unsigned long int eid, float* input, float* output, float* weights, float* bias, 
         long int dim_in[2], long int dim_w[2])
 {

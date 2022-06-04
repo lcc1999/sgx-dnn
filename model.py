@@ -4,12 +4,11 @@ import datetime
 from tqdm import tqdm
 from tensorflow.python.ops import clip_ops
 from layers_keras import DenseNew,SoftmaxNew,ReluNew,DropoutNew
+from utils import transform
 from ctypes import *
 import os
 #os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"]='3'
-
-
 
 
 def prepare(x, y):
@@ -26,51 +25,19 @@ test_dataset = test_dataset.map(prepare)
 test_dataset = test_dataset.shuffle(10000).batch(128)
 
 
-
-sgx_lib_path = "layers_sgx.so"
-sgx_lib = cdll.LoadLibrary(sgx_lib_path)
-lib_path = "layers_cc/layers.so"
-lib = tf.load_op_library(lib_path)
-sgx_lib.initialize_enclave.restype = c_ulong
-eid = sgx_lib.initialize_enclave()
-
-'''
-from random import random
-rand=[[random() for j in range(5)] for i in range(2)]
-x=tf.random.uniform([3,5])
-#print(rand)
-#print(x)
-
-init = tf.constant_initializer(rand)
-l = layers.Dense(2, kernel_initializer=init)
-with tf.GradientTape() as tape:
-    z=l(x)
-    print(z)
-g = tape.gradient(z, l.trainable_variables)
-print(g)
-
-
-layer=DenseNew(2,eid,kernel_initializer=init)
-with tf.GradientTape() as tape:
-    y=layer(x)
-    print(y)
-grads = tape.gradient(y, layer.trainable_variables)
-print(grads)
-'''
-
 def create_model():
   return tf.keras.models.Sequential([
     layers.Flatten(input_shape=(28, 28)),
-    DenseNew(units=256, eid=eid, kernel_initializer='glorot_uniform'),
-    #layers.Dense(512),
-    ReluNew(eid=eid),
-    #layers.ReLU(),
-    DropoutNew(rate=0.2, eid=eid),
-    #layers.Dropout(0.2),
-    DenseNew(units=10, eid=eid, kernel_initializer='glorot_uniform'),
-    #layers.Dense(10),
-    SoftmaxNew(eid=eid)
-    #layers.Softmax()
+    #DenseNew(units=256, eid=eid, kernel_initializer='glorot_uniform'),
+    layers.Dense(512),
+    #ReluNew(eid=eid),
+    layers.ReLU(),
+    #DropoutNew(rate=0.2, eid=eid),
+    layers.Dropout(0.2),
+    #DenseNew(units=10, eid=eid, kernel_initializer='glorot_uniform'),
+    layers.Dense(10),
+    #SoftmaxNew(eid=eid)
+    layers.Softmax()
   ])
 model = create_model()    
 
@@ -107,7 +74,7 @@ test_log_dir = 'logs/' + current_time + '/test'
 train_summary_writer = tf.summary.create_file_writer(train_log_dir)
 test_summary_writer = tf.summary.create_file_writer(test_log_dir)
 
-EPOCHS = 5
+EPOCHS = 1
 start = datetime.datetime.now()
 for epoch in range(EPOCHS):
   for (x_train, y_train) in train_dataset:
@@ -118,6 +85,7 @@ for epoch in range(EPOCHS):
 
   for (x_test, y_test) in test_dataset:
     test_step(model, x_test, y_test)
+    
   with test_summary_writer.as_default():
     tf.summary.scalar('loss', test_loss.result(), step=epoch)
     tf.summary.scalar('accuracy', test_accuracy.result(), step=epoch)
@@ -133,7 +101,77 @@ for epoch in range(EPOCHS):
   train_accuracy.reset_states()
   test_accuracy.reset_states()
   print(datetime.datetime.now()-start)
-  break
 
+
+
+sgx_lib_path = "layers_sgx.so"
+sgx_lib = cdll.LoadLibrary(sgx_lib_path)
+sgx_lib.initialize_enclave.restype = c_ulong
+eid = sgx_lib.initialize_enclave()
+
+### quantize=False,eid=eid
+new_model=transform(model=model,input_shape=(1,28,28),dtype='float32',quantize=False,eid=eid)
+
+### quantize=False,eid=None
+#new_model=transform(model=model,input_shape=(1,28,28),dtype='float32',quantize=False,eid=None)
+P = 2**23 + 2**21 + 7
+### quantize=True,eid=eid
+#new_model=transform(model=model,input_shape=(1,28,28),dtype='float32',quantize=True,eid=eid,prime=P,bits_w=8,bits_x=8)
+
+### quantize=True,eid=None
+#new_model=transform(model=model,input_shape=(1,28,28),dtype='float32',quantize=True,eid=None,prime=P,bits_w=8,bits_x=8)
+
+print(new_model.get_config())
+
+if True:
+  for (x_test, y_test) in test_dataset:
+    test_step(model, x_test, y_test)
+
+  template = 'Test Loss: {}, Test Accuracy: {}'
+  print (template.format(test_loss.result(), 
+                         test_accuracy.result()*100))
+  test_loss.reset_states()
+  test_accuracy.reset_states()
+  print(datetime.datetime.now()-start)
+  
 sgx_lib.destroy_enclave.argtypes = [c_ulong]
 sgx_lib.destroy_enclave(eid)
+
+
+
+
+
+'''
+P = 2**23 + 2**21 + 7
+bits_w=8
+bits_x=8
+def prepare(x, y):
+    x = tf.math.round(tf.cast(x, tf.float32) / 255.*(2**bits_x))
+    #x = tf.cast(x, tf.float32) / 255.
+    y = tf.cast(y, tf.int32) 
+    y = tf.one_hot(y,10)
+    return x,y
+(x_train, y_train),(x_test, y_test) = datasets.mnist.load_data()
+train_dataset = tf.data.Dataset.from_tensor_slices((x_train,y_train))
+train_dataset = train_dataset.map(prepare)
+train_dataset = train_dataset.shuffle(60000).batch(128)
+test_dataset = tf.data.Dataset.from_tensor_slices((x_test,y_test))
+test_dataset = test_dataset.map(prepare)
+test_dataset = test_dataset.shuffle(10000).batch(128)
+
+
+new_model=transform(model=model,input_shape=(1,28,28),dtype='float32',quantize=True,eid=None,prime=P,bits_w=bits_w,bits_x=bits_x)
+
+print(new_model.get_config())
+
+if True:
+  test_loss.reset_states()
+  test_accuracy.reset_states()
+  for (x_test, y_test) in test_dataset:
+    test_step(new_model, x_test, y_test)
+  template = 'Test Loss: {}, Test Accuracy: {}'
+  print (template.format(test_loss.result(), 
+                         test_accuracy.result()*100))
+  test_loss.reset_states()
+  test_accuracy.reset_states()
+  print(datetime.datetime.now()-start)'''
